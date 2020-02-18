@@ -34,5 +34,17 @@ namespace OilPipe.Properties {
                 this["EXCEL"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string FOLDER {
+            get {
+                return ((string)(this["FOLDER"]));
+            }
+            set {
+                this["FOLDER"] = value;
+            }
+        }
     }
 }

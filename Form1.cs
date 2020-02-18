@@ -40,6 +40,9 @@ namespace OilPipe
         string comboStart = "";
         string comboEnd = "";
 
+        //panel
+        private Boolean mousing;
+        private int startX, startY;
 
         private void groupBox1_Enter(object sender, EventArgs e)
         {
@@ -49,7 +52,7 @@ namespace OilPipe
 
         private void Form1_Load(object sender, EventArgs e)
         {
-
+            
         }
 
         string[] ConvertToStringArray(System.Array values)
@@ -138,11 +141,10 @@ namespace OilPipe
 
         private void btn_sf_Click(object sender, EventArgs e)
         {
-            OpenFileDialog openFile = new OpenFileDialog();
-            openFile.InitialDirectory = Common.loadDirectory("EXCEL", false);
-            openFile.DefaultExt = "xlsx";
-            openFile.Filter = "Excel 파일(*.xlsx)|*.xlsx";
-            openFile.ShowDialog();
+            FolderBrowserDialog dialog = new FolderBrowserDialog();
+            dialog.ShowDialog();
+            textBox_folder.Text = dialog.SelectedPath;
+            Common.saveDirectory("FOLDER", this.textBox_folder.Text);
         }
 
         private void dataGridView1_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
@@ -357,36 +359,68 @@ namespace OilPipe
 
         }
 
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            mousing = true;
+            startX = e.X;
+            startY = e.Y; 
+        }
+
+        private void panel1_MouseUp(object sender, MouseEventArgs e)
+        {
+            mousing = false;
+        }
+
+        private void panel1_MouseMove(object sender, MouseEventArgs e)
+        {
+            if(mousing)
+            {
+                int changeX = e.X - startX;
+                int changeY = e.Y - startY;
+
+                panel1.Location = new System.Drawing.Point(panel1.Location.X + changeX, panel1.Location.Y + changeY);
+            }
+        }
+
+        private void textBox_folder_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
         private void btn_shape_Click(object sender, EventArgs e)
         {
-            string path = "C:\\OilPipe\\shape";
-            
+            //string path = "C:\\excel_control-gridView-\\shape";
+            string path = textBox_folder.Text;
+
             string save_LM = "UFL_OPIP_LM" + comboStart + comboEnd;
-            string filename = "UFL_OPIP_PS" + comboStart + comboEnd;
-            string filePath = path + "\\" + filename;
-            int dRcnt = dataGridView1.Rows.Count-1;
+            string save_PS = "UFL_OPIP_PS" + comboStart + comboEnd;
+            string psFilePath = path + "\\" + save_PS;
+            string lmFilePath = path + "\\" + save_LM;
+            int dRcnt = dataGridView1.Rows.Count - 1;
             int dCcnt = dataGridView1.Columns.Count;
 
             Driver driver = Ogr.GetDriverByName("ESRI Shapefile");
-            DataSource data_source = driver.CreateDataSource(path, new string[] {});
+            DataSource data_source = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
 
             OSGeo.OSR.SpatialReference srs = new OSGeo.OSR.SpatialReference("");
             srs.ImportFromEPSG(5186);
 
             // MessageBox.Show( dataGridView1.Rows[1].Cells[5].Value.ToString());
-            
-            System.IO.FileInfo fi = new System.IO.FileInfo(filePath+".shp");
-            if(fi.Exists)
+
+            System.IO.FileInfo fi = new System.IO.FileInfo(psFilePath + ".shp");
+            if (fi.Exists)
             {
                 MessageBox.Show("파일이 있습니다");
-                File.Delete(filePath+".prj");
-                File.Delete(filePath+".shp");
-                File.Delete(filePath + ".dbf");
-                File.Delete(filePath + ".shx");
-                
-            } else
+                File.Delete(psFilePath + ".prj");
+                File.Delete(psFilePath + ".shp");
+                File.Delete(psFilePath + ".dbf");
+                File.Delete(psFilePath + ".shx");
+
+            }
+            else
             {
-                var layer = data_source.CreateLayer(filename, srs, wkbGeometryType.wkbPoint, new string[] { });
+                //Ps
+                var layer = data_source.CreateLayer(save_PS, srs, wkbGeometryType.wkbPoint, new string[] { "ENCODING=UTF-8" });
 
                 //string x_temp = dataGridView1.Rows[0].Cells[2].Value.ToString();
 
@@ -412,13 +446,18 @@ namespace OilPipe
                 //FeatureDefn ftr = new FeatureDefn(null);
                 ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
                 Feature ipFeature = new Feature(ftr);
-
+                string wktPointZ = "";
+                Geometry ipGeom = null;
                 for (int i = 0; i < dRcnt; ++i)
                 {
+                    wktPointZ = String.Format("POINT Z({0} {1} {2})", dataGridView1.Rows[i].Cells[2].Value.ToString(), dataGridView1.Rows[i].Cells[3].Value.ToString(),
+                        dataGridView1.Rows[i].Cells[4].Value.ToString());
+                    ipGeom = Ogr.CreateGeometryFromWkt(ref wktPointZ, srs);
+                    ipFeature.SetGeometry(ipGeom);
                     ipFeature.SetField("FTR_CDE", "SF900");
                     ipFeature.SetField("HJD_CDE", "");
                     ipFeature.SetField("PIP_DEP", "");
-                    ipFeature.SetField("시점", "인천");
+                    ipFeature.SetField("시점", dataGridView1.Rows[i].Cells[0].Value.ToString());
                     ipFeature.SetField("종점", dataGridView1.Rows[i].Cells[1].Value.ToString());
                     ipFeature.SetField("X", dataGridView1.Rows[i].Cells[2].Value.ToString());
                     ipFeature.SetField("Y", dataGridView1.Rows[i].Cells[3].Value.ToString());
@@ -430,14 +469,71 @@ namespace OilPipe
                 layer.CommitTransaction();
                 layer.SyncToDisk();
             }
-            
 
+            //LM
+            System.IO.FileInfo fLM = new System.IO.FileInfo(lmFilePath + ".shp");
+            if (fLM.Exists)
+            {
+                MessageBox.Show(lmFilePath + "이 있습니다");
+                File.Delete(lmFilePath + ".prj");
+                File.Delete(lmFilePath + ".shp");
+                File.Delete(lmFilePath + ".dbf");
+                File.Delete(lmFilePath + ".shx");
+            }
+            else
+            {
+                //LM
+                var layer = data_source.CreateLayer(save_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
+                FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
+                FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
+                FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
+                FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
+                FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
+                FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
+                FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
+                FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
 
+                layer.CreateField(ftr_cde, 1);
+                layer.CreateField(hjd_cde, 1);
+                layer.CreateField(pip_dep, 1);
+                layer.CreateField(start_point, 1);
+                layer.CreateField(end_point, 1);
+                layer.CreateField(field_x, 1);
+                layer.CreateField(field_y, 1);
+                layer.CreateField(field_z, 1);
+                FeatureDefn ftr = layer.GetLayerDefn();
+                //FeatureDefn ftr = new FeatureDefn(null);
 
+                ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
+                Feature ipFeature = new Feature(ftr);
+                Geometry ipGeom = null;
+                string lineWKT = "LINESTRING (";
+                for (int i=0; i<dRcnt; ++i)
+                {
+                    string s_x = dataGridView1.Rows[i].Cells[2].Value.ToString();
+                    string s_y = dataGridView1.Rows[i].Cells[3].Value.ToString();
 
+                    if (i == dRcnt-1)
+                    {
+                        lineWKT = lineWKT + s_x + " " + s_y + ")";
+                    } else {
+
+                        lineWKT = lineWKT + s_x + " " + s_y + ",";
+                    }
+                    
+                }
+                ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
+                ipFeature.SetGeometry(ipGeom);
+                ipFeature.SetField("FTR_CDE", "SF900");
+                ipFeature.SetField("HJD_CDE", "");
+                ipFeature.SetField("PIP_DEP", "");
+                ipFeature.SetField("시점", dataGridView1.Rows[0].Cells[0].Value.ToString());
+                ipFeature.SetField("종점", dataGridView1.Rows[0].Cells[1].Value.ToString());
+                layer.CreateFeature(ipFeature);
+                layer.CommitTransaction();
+                layer.SyncToDisk();
+            }
         }
-
-        
     }
 
 }

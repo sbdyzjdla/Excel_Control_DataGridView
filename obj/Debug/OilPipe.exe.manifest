@@ -282,14 +282,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="OilPipe.exe" size="36352">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="OilPipe.exe" size="38912">
       <assemblyIdentity name="OilPipe" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>eY9Xz6uFm8qHe19rquk6azZ36kLJzHgORPpNRiyCAbA=</dsig:DigestValue>
+        <dsig:DigestValue>dd3YBVsMM9ghskdO1m7QumYwWsjaDm28X+CGrn1MpQU=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -323,13 +323,13 @@
       <dsig:DigestValue>+yV6adEVlpUIOiH/IdsfqaixKo0MB7DiB/hBOyI4wKw=</dsig:DigestValue>
     </hash>
   </file>
-  <file name="OilPipe.exe.config" size="904">
+  <file name="OilPipe.exe.config" size="1013">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>E0ezk+/SJX+j/fiXLDlO3XxpYGzoqSpz7zgDqve//X0=</dsig:DigestValue>
+      <dsig:DigestValue>uCeUKLOZA1b/HnempSuUGJhOlRJLKyro1jHd5srI358=</dsig:DigestValue>
     </hash>
   </file>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
