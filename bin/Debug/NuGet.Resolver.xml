@@ -1,0 +1,454 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NuGet.Resolver</name>
+    </assembly>
+    <members>
+        <member name="T:NuGet.Resolver.CombinationSolver`1">
+            <summary>
+            This class is responsible for finding the best combination of compatible items. The caller
+            supplies a collection of groups, a sorting function (to determine priority within a group), and
+            a function to determine whether two items are incompatible. The solution (if found) will contain
+            exactly 1 item from each group.
+            </summary>
+            <remarks>Created by Aaron Marten</remarks>
+            <typeparam name="T">The type of item to evaluate.</typeparam>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._initialDomains">
+            <summary>
+            The initial domains are the full/initial candidate sets we start with when
+            attempting to discover a solution. They need to be stored and referred to
+            as the algorithm executes to re-initialize the current/working domains.
+            </summary>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._currentDomains">
+            <summary>
+            The current domains are initialized with the initial domains. As we progress
+            through the algorithm, we may remove elements from the current domain as we
+            discover that an item cannot be part of the solution. If we need to backtrack,
+            we may reset the current domain to the corresponding initial domain.
+            </summary>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._conflictSet">
+            <summary>
+            The subset of past indexes where a conflict was found. Used to calculate the biggest and safest
+            (i.e. not missing a better solution) jump we can make in MoveBackward.
+            </summary>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._pastForwardChecking">
+            <summary>
+            For each position, maintain a stack of past indexes that forward checked (and found/removed conflicts)
+            from the position.
+            </summary>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._futureForwardChecking">
+            <summary>
+            For each position, maintain a stack of forward/future indexes where conflicts were found.
+            </summary>
+        </member>
+        <member name="F:NuGet.Resolver.CombinationSolver`1._reductions">
+            <summary>
+            For each position, maintain a Stack of sets of items that were 'reduced' from the domain. This allows us
+            to restore the items back into the domain on future iterations in case we need to back up, etc...
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.FindSolution(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{`0}},System.Collections.Generic.IComparer{`0},System.Func{`0,`0,System.Boolean},System.Action{System.Collections.Generic.IEnumerable{`0}})">
+            <summary>
+            Entry point for the combination evalutation phase of the algorithm. The algorithm
+            combines forward checking [FC] (i.e. trying to eliminate future possible combinations to evaluate)
+            with Conflict-directed Back Jumping.
+            Based off the FC-CBJ algorithm described in Prosser's Hybrid
+            Algorithms for the Constraint Satisfaction Problem:
+            http://archive.nyu.edu/bitstream/2451/14410/1/IS-90-10.pdf
+            </summary>
+            <param name="groupedItems">The candidate enlistment items grouped by product.</param>
+            <param name="itemSorter">
+            Function supplied by the caller to sort items in preferred/priority order. 'Higher
+            priority' items should come *first* in the sort.
+            </param>
+            <param name="shouldRejectPairFunc">
+            Function supplied by the caller to determine whether two items are
+            compatible or not.
+            </param>
+            <param name="diagnosticOutput">
+            Used to provide partial solutions to be used for diagnostic messages.
+            </param>
+            <returns>The 'best' solution (if one exists). Null otherwise.</returns>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.MoveForward(System.Int32,System.Boolean@)">
+            <summary>
+            Attempts to populate the element at position i with a consistent possibility
+            and move forward to the next element in the sequence.
+            </summary>
+            <param name="i">The position in the solution to attempt to populate.</param>
+            <param name="consistent">
+            Upon completion, set to true if the function was able to find a candidate to
+            populate position i with. False otherwise.
+            </param>
+            <returns>
+            The next position to evaluate if consistent is true. If false, return value is the value to move
+            back to.
+            </returns>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.MoveBackward(System.Int32,System.Boolean@)">
+            <summary>
+            Attempts to move back in the algorithm from position i.
+            </summary>
+            <param name="i">The position to unset / move back from.</param>
+            <param name="consistent">
+            True if backwards move was successful and algorithm can move forward again. False
+            if the algorithm should continue to move backwards.
+            </param>
+            <returns>The position that the call was able to safely move back to.</returns>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.CheckForward(System.Int32,System.Int32)">
+            <summary>
+            Performs forward checking between the already selected element at position i
+            and potential candidates at position j.
+            </summary>
+            <param name="i">The position of the current element.</param>
+            <param name="j">The position of the future domain to check against.</param>
+            <returns>
+            True if there are still remaining possibilities in the future domain. False if all possibilities
+            have been eliminated.
+            </returns>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.UndoReductions(System.Int32)">
+            <summary>
+            Undo reductions that were previously performed from position i.
+            </summary>
+            <param name="i">The position to undo reductions from.</param>
+        </member>
+        <member name="M:NuGet.Resolver.CombinationSolver`1.UpdateCurrentDomain(System.Int32)">
+            <summary>
+            Reinitialize the current domain to its initial value and apply any reductions against it.
+            </summary>
+            <param name="i">The position of the domain to update.</param>
+        </member>
+        <member name="T:NuGet.Resolver.CompareWrapper`1">
+            <summary>
+            Simple helper class to provide an IComparer instance based on a comparison function
+            </summary>
+            <typeparam name="T">The type to compare.</typeparam>
+        </member>
+        <member name="T:NuGet.Resolver.NuGetResolverConstraintException">
+            <summary>
+            Constraint exception. Thrown when a solution cannot be found.
+            </summary>
+        </member>
+        <member name="T:NuGet.Resolver.NuGetResolverInputException">
+            <summary>
+            Input validation exception
+            </summary>
+        </member>
+        <member name="T:NuGet.Resolver.PackageResolver">
+            <summary>
+            A core package dependency resolver.
+            </summary>
+            <remarks>Not thread safe</remarks>
+        </member>
+        <member name="M:NuGet.Resolver.PackageResolver.Resolve(NuGet.Resolver.PackageResolverContext,System.Threading.CancellationToken)">
+            <summary>
+            Resolve a package closure
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.PackageResolver.RemoveImpossiblePackages(System.Collections.Generic.IEnumerable{NuGet.Protocol.Core.Types.SourcePackageDependencyInfo},System.Collections.Generic.ISet{System.String})">
+            <summary>
+            Remove packages that can't possibly form part of a solution
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.PackageResolverContext.#ctor(NuGet.Resolver.DependencyBehavior,System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{NuGet.Packaging.PackageReference},System.Collections.Generic.IEnumerable{NuGet.Packaging.Core.PackageIdentity},System.Collections.Generic.IEnumerable{NuGet.Protocol.Core.Types.SourcePackageDependencyInfo},System.Collections.Generic.IEnumerable{NuGet.Configuration.PackageSource},NuGet.Common.ILogger)">
+            <summary>
+            Resolver context
+            </summary>
+            <param name="dependencyBehavior">behavior for non-target packages</param>
+            <param name="targetIds">packages to install or update</param>
+            <param name="requiredPackageIds">packages required in the solution</param>
+            <param name="packagesConfig">existing packages</param>
+            <param name="preferredVersions">preferred package versions or the installed version of a package</param>
+            <param name="availablePackages">all packages from the gather stage</param>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.TargetIds">
+            <summary>
+            New packages to install or update. These will prefer the highest version.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.RequiredPackageIds">
+            <summary>
+            Existing packages that are required, and the target ids that are required.
+            These packages are required for the solution.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.PackagesConfig">
+            <summary>
+            The existing state of the project from packages.config
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.PreferredVersions">
+            <summary>
+            Preferred versions of each package. If the package does not exist here
+            it will use the dependency behavior, or if it is a target the highest
+            version will be used.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.AvailablePackages">
+            <summary>
+            All packages available to use in the solution.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.DependencyBehavior">
+            <summary>
+            Dependency behavior
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.PackageSources">
+            <summary>
+            Package Sources
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.PackageResolverContext.Log">
+            <summary>
+            Logging adapter
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverInputSort.TreeFlatten(System.Collections.Generic.List{System.Collections.Generic.List{NuGet.Resolver.ResolverPackage}},NuGet.Resolver.PackageResolverContext)">
+             <summary>
+             Order package trees into a flattened list
+             
+             Package Id (Parent count)
+             Iteration 1: A(0) -&gt; B(1) -&gt; D(2)
+                          C(0) -&gt; D(2)
+                         [Select A]
+             
+             Iteration 2: B(0) -&gt; D(2)
+                          C(0) -&gt; D(2)
+                         [Select B]
+             
+             Iteration 2: C(0) -&gt; D(1)
+                         [Select C]
+            
+             Result: A, B, C, D
+             </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverInputSort.GetTreeFlattenPriority(System.String,NuGet.Resolver.PackageResolverContext)">
+            <summary>
+            Packages occuring first are more likely to get their preferred version, for this 
+            reason installed packages should go first, then targets.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.ResolverPackage.Absent">
+            <summary>
+            An absent package represents that the package is not needed in the solution.
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverPackage.FindDependencyRange(System.String)">
+            <summary>
+            Find the version range for the given package. The package may not exist.
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.GetDiagnosticMessage(System.Collections.Generic.IEnumerable{NuGet.Resolver.ResolverPackage},System.Collections.Generic.IEnumerable{NuGet.Packaging.Core.PackageDependencyInfo},System.Collections.Generic.IEnumerable{NuGet.Packaging.PackageReference},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{NuGet.Configuration.PackageSource})">
+            <summary>
+            Create an error message to describe the primary issue in an invalid solution.
+            </summary>
+            <param name="solution">A partial solution from the resolver</param>
+            <param name="availablePackages">all packages that were available for the solution</param>
+            <param name="packagesConfig">packages already installed in the project</param>
+            <param name="newPackageIds">new packages that are not already installed</param>
+            <returns>A user friendly diagonstic message</returns>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.FormatDependencyConstraint(NuGet.Resolver.ResolverPackage,System.String)">
+            <summary>
+            Ex: PackageA (&gt; 1.0.0)
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.GetBrokenDependenciesWithInstalledPackages(NuGet.Resolver.ResolverPackage,System.Collections.Generic.IEnumerable{NuGet.Resolver.ResolverPackage},System.Collections.Generic.IEnumerable{NuGet.Packaging.Core.PackageDependencyInfo},System.Collections.Generic.HashSet{System.String})">
+            <summary>
+            This will try and get broken dependencies for target or it's dependencies WRT installed packages as well as all available packages to install
+            </summary>
+            <param name="package">target package</param>
+            <param name="solution">last best known solution</param>
+            <param name="availablePackages">all available packages from all sources</param>
+            <returns>list of broken dependencies</returns>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.GetLowestDistanceFromTarget(System.String,System.Collections.Generic.HashSet{System.String},System.Collections.Generic.IEnumerable{NuGet.Resolver.ResolverPackage})">
+            <summary>
+            Find distance of a dependency from a target package.
+            A -&gt; B -&gt; C
+            C is 2 away from A
+            </summary>
+            <param name="packageId">package id</param>
+            <param name="targets">required targets</param>
+            <param name="packages">packages in the solution, only 1 package per id should exist</param>
+            <returns>number of levels from a target</returns>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.TopologicalSort(System.Collections.Generic.IEnumerable{NuGet.Resolver.ResolverPackage})">
+            <summary>
+            Sort packages in order of dependencies
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.ShouldRejectPackagePair(NuGet.Resolver.ResolverPackage,NuGet.Resolver.ResolverPackage)">
+            <summary>
+            Check if two packages can exist in the same solution.
+            This is used by the resolver.
+            </summary>
+        </member>
+        <member name="M:NuGet.Resolver.ResolverUtility.FindFirstCircularDependency(System.Collections.Generic.IEnumerable{NuGet.Resolver.ResolverPackage})">
+            <summary>
+            Returns the first circular dependency found for a package. Please sort solution topologically first to improve performance.
+            </summary>
+        </member>
+        <member name="T:NuGet.Resolver.ResolverUtility.QueueNode">
+            <summary>
+            Simple QueueNode class to hold package n it's parent nodes list together
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.ResolverUtility.QueueNode.Package">
+            <summary>
+            Package node
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.ResolverUtility.QueueNode.ParentPackages">
+            <summary>
+            Complete Parent list for the given package
+            </summary>
+        </member>
+        <member name="T:NuGet.Resolver.Strings">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.CircularDependencyDetected">
+            <summary>
+              Looks up a localized string similar to Circular dependency detected '{0}'..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.DependencyConstraint">
+            <summary>
+              Looks up a localized string similar to constraint.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.DuplicateDependencyIdsError">
+            <summary>
+              Looks up a localized string similar to The package '{0}' version '{1}' declared a duplicate dependency '{2}'. This might mean the package is corrupt or the server metadata for the package is corrupt..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.FatalError">
+            <summary>
+              Looks up a localized string similar to A fatal error occured while resolving dependencies..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.InvalidPackageConfig">
+            <summary>
+              Looks up a localized string similar to One or more unresolved package dependency constraints detected in the existing packages.config file. All dependency constraints must be resolved to add or update packages. If these packages are being updated this message may be ignored, if not the following error(s) may be blocking the current package operation: {0}.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.MissingDependencyInfo">
+            <summary>
+              Looks up a localized string similar to Unable to find package '{0}'. Existing packages must be restored before performing an install or update..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.NoSolution">
+            <summary>
+              Looks up a localized string similar to Unable to resolve dependencies..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.PackagesConfigConstraint">
+            <summary>
+              Looks up a localized string similar to '{0}' has an additional constraint {1} defined in {2}..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.ResolverTotalTime">
+            <summary>
+              Looks up a localized string similar to Resolving dependency information took {0}.
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.UnableToFindCompatibleVersion">
+            <summary>
+              Looks up a localized string similar to Unable to find a version of '{0}' that is compatible with {1}..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.UnableToResolveDependencyForEmptySource">
+            <summary>
+              Looks up a localized string similar to Unable to resolve dependency '{0}'..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.UnableToResolveDependencyForMultipleSources">
+            <summary>
+              Looks up a localized string similar to Unable to resolve dependency '{0}'. Source(s) used: {1}..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.UnknownDependencyBehavior">
+            <summary>
+              Looks up a localized string similar to Unknown DependencyBehavior value..
+            </summary>
+        </member>
+        <member name="P:NuGet.Resolver.Strings.VersionIsNotCompatible">
+            <summary>
+              Looks up a localized string similar to Unable to resolve dependencies. '{0}' is not compatible with {1}..
+            </summary>
+        </member>
+        <member name="M:NuGet.Shared.EqualityUtility.OrderedEquals``2(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.Func{``0,``1},System.Collections.Generic.IComparer{``1},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Compares two enumberables for equality, ordered according to the specified key and optional comparer. Handles null values gracefully.
+            </summary>
+            <typeparam name="TSource">The type of the list</typeparam>
+            <typeparam name="TKey">The type of the sorting key</typeparam>
+            <param name="self">This list</param>
+            <param name="other">The other list</param>
+            <param name="keySelector">The function to extract the key from each item in the list</param>
+            <param name="orderComparer">An optional comparer for comparing keys</param>
+            <param name="sequenceComparer">An optional comparer for sequences</param>
+        </member>
+        <member name="M:NuGet.Shared.EqualityUtility.SequenceEqualWithNullCheck``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Compares two sequence for equality, allowing either sequence to be null. If one is null, both have to be
+            null for equality.
+            </summary>
+        </member>
+        <member name="M:NuGet.Shared.EqualityUtility.SetEqualsWithNullCheck``1(System.Collections.Generic.ISet{``0},System.Collections.Generic.ISet{``0},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Compares two sets for equality, allowing either sequence to be null.
+            If one is null, both have to be null for equality.
+            </summary>
+        </member>
+        <member name="T:NuGet.Shared.HashCodeCombiner">
+            <summary>
+            Hash code creator, based on the original NuGet hash code combiner/ASP hash code combiner implementations
+            </summary>
+        </member>
+        <member name="M:NuGet.Shared.HashCodeCombiner.GetHashCode``2(``0,``1)">
+            <summary>
+            Create a unique hash code for the given set of items
+            </summary>
+        </member>
+        <member name="M:NuGet.Shared.HashCodeCombiner.GetHashCode``3(``0,``1,``2)">
+            <summary>
+            Create a unique hash code for the given set of items
+            </summary>
+        </member>
+        <member name="M:NuGet.Shared.Extensions.AsList``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Return the enumerable as a List of T, copying if required. Optimized for common case where it is an List of T.
+            Avoid mutating the return value.
+            </summary>
+            <remarks>https://aspnetwebstack.codeplex.com/SourceControl/latest#src/Common/CollectionExtensions.cs</remarks>
+        </member>
+        <member name="M:NuGet.Shared.Extensions.AsHashSet``1(System.Collections.Generic.ISet{``0},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Return the ISet as a HashSet of T, copying if required. Optimized for common case where it is a HashSet of T.
+            Avoid mutating the return value.
+            </summary>
+        </member>
+    </members>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" /><DigestValue>JpgJuR9Vze/LHE4ooT+NZfCxTKo=</DigestValue></Reference></SignedInfo><SignatureValue>e+WXoWohvNkSOOjYbxJG2O7RPNwkUlo2UElXH4yj9gXernXtViSUTpeaHJ9qe8EJlgugZG9YVlHeEx8GmnWl2I02nNnKmNayHPWOk0MKT3cvn8vY0YrodB00OJVI7lC4Pge0aCCIPbUmCK8WPi5jhl/uzwbdM+emnKDM1hX8ZlYgLAdwwk+RQG3ZsUbU2XDvT0nvaDSQ5ojo3s1q75KHB/bfm0klcBYoVFYdlDVPpRkc1webyKdDI9QXmSiMX/uuKtigdkl/AUOhYRgsBE3kkaCzZzVkO8+AOoOBMwKtyh1xLEHy4hgxLhXlwqnOY8OSi6UiyngRl2Hac05I22Sdhw==</SignatureValue><KeyInfo><KeyValue><RSAKeyValue><Modulus>lVrGhmlHHTQe8VXDZnX2YlQYWBRnJ/CjKsYDSLzmVjR/SWEC7oR4ZieUViEstaHst807sai25BwHZm3lPDRTKOPT7+9TICEvSBvxLasDh+7qWp/pSKujTnMOXzujrPtdkdENvDMxp/t8uxdpig56KVbtLBLn8uOd4Mc9ejPGwMOPkF7r+/n0fVs0SdgqVOtsECmIhUDH3sOlYeX7j6F5aDd5OvkJc+84HE+GEZsc8e4zFaT/7ryurGXAcUN1oAf1pMlx4MWmNfSAMy6tkIj4l9mK8okeRLGAat+QT+1NeQ5WbaUrNsCGE5JAwcYTySAyYKMGbuRsoR3aq7Ldzo5EkQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue></KeyValue><X509Data><X509Certificate>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</X509Certificate><X509Certificate>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</X509Certificate><X509Certificate>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</X509Certificate></X509Data></KeyInfo><Object Id="ts-countersig"><X509Data><X509Certificate>MIIE2jCCA8KgAwIBAgITMwAAATooqWKENAQ6aAAAAAABOjANBgkqhkiG9w0BAQUFADB3MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBvcmF0aW9uMSEwHwYDVQQDExhNaWNyb3NvZnQgVGltZS1TdGFtcCBQQ0EwHhcNMTkxMDIzMjMxNzExWhcNMjEwMTIxMjMxNzExWjCByjELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAldBMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xLTArBgNVBAsTJE1pY3Jvc29mdCBJcmVsYW5kIE9wZXJhdGlvbnMgTGltaXRlZDEmMCQGA1UECxMdVGhhbGVzIFRTUyBFU046QUI0MS00QjI3LUYwMjYxJTAjBgNVBAMTHE1pY3Jvc29mdCBUaW1lLVN0YW1wIFNlcnZpY2UwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQD4sio6vNOH8bDBok2LoiN4D73CYRK6DEo/NwIA1CHxN8Mg67v4GW2Gg3o0lik5j5OKmWkGav1NN3Cvy6guDuvdsswW1MSAIH8HZhjYld0AgSYYYTtfbjerKfnCeHYz8yuS2M0rhwxhzPUp9zh1OW6KSw1Pq+NOhDc8/7kYyps3I2VrT/JEshi/mrE33XHn/2QfA19MN+OxUjmPySL1OO4S5GFvDjErxZAz5XrrQMMX65/lGvdQw6f5hu8KuKix8RQ9gbaBIU680s40eNx5AOTLkp5weN4YpIY+IxMXp41sUfCbqJcoz6UlI2Nyl19mUo3wbnwQGkTdEgD6HW/tC7qRAgMBAAGjggEJMIIBBTAdBgNVHQ4EFgQUwE/e9+gnSO9OeN9eOgsjg8cAy9cwHwYDVR0jBBgwFoAUIzT42VJGcArtQPt2+7MrsMM1sw8wVAYDVR0fBE0wSzBJoEegRYZDaHR0cDovL2NybC5taWNyb3NvZnQuY29tL3BraS9jcmwvcHJvZHVjdHMvTWljcm9zb2Z0VGltZVN0YW1wUENBLmNybDBYBggrBgEFBQcBAQRMMEowSAYIKwYBBQUHMAKGPGh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2kvY2VydHMvTWljcm9zb2Z0VGltZVN0YW1wUENBLmNydDATBgNVHSUEDDAKBggrBgEFBQcDCDANBgkqhkiG9w0BAQUFAAOCAQEAcfwWy/jkHd+5oHBhhosLBNq6tbMxeoL1zEl9LnrKgc8CT0PSq1dfueehYbXOhpRgGwR2JRqm8FzBUbKqvhFOKekbiajTwpcQmPYdQ/lUBSXXw2vMdvj8Qzon+quHlqISLUMG/DrZN+qoxQmOX6vOMjIXaa43p2+d7OycYYcq+5S+slpRufgu2ghNKdUD5GGiuXRIaqSAghxtgfWS+6fBK2+PUlbcozYAvCT+lbnatIy7ZBrIlD3CHlGFMk37Ng7mmCkJYLylifuqxHQr7vR7jQmC8ykHBYrz95JE4nz24OPDe8MwKZbOp1ek40plnok8sw2u2xPsfQeOYLPYkOJsNg==</X509Certificate><X509Certificate>MIIGBzCCA++gAwIBAgIKYRZoNAAAAAAAHDANBgkqhkiG9w0BAQUFADBfMRMwEQYKCZImiZPyLGQBGRYDY29tMRkwFwYKCZImiZPyLGQBGRYJbWljcm9zb2Z0MS0wKwYDVQQDEyRNaWNyb3NvZnQgUm9vdCBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkwHhcNMDcwNDAzMTI1MzA5WhcNMjEwNDAzMTMwMzA5WjB3MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBvcmF0aW9uMSEwHwYDVQQDExhNaWNyb3NvZnQgVGltZS1TdGFtcCBQQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCfoWyx39tIkip8ay4Z4b3i48WZUSNQrc7dGE4kD+7Rp9FMrXQwIBHrB9VUlRVJlBtCkq6YXDAm2gBr6Hu97IkHD/cOBJjwicwfyzMkh53y9GccLPx754gd6udOo6HBI1PKjfpFzwnQXq/QsEIEovmmbJNn1yjcRlOwhtDlKEYuJ6yGT1VSDOQDLPtqkJAwbofzWTCd+n7Wl7PoIZd++NIT8wi3U21StEWQn0gASkdmEScpZqiX5NMGgUqi+YSnEUcUCYKfhO1VeP4Bmh1QCIUAEDBG7bfeI0a7xC1Un68eeEExd8yb3zuDk6FhArUdDbH895uyAc4iS1T/+QXDwiALAgMBAAGjggGrMIIBpzAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQjNPjZUkZwCu1A+3b7syuwwzWzDzALBgNVHQ8EBAMCAYYwEAYJKwYBBAGCNxUBBAMCAQAwgZgGA1UdIwSBkDCBjYAUDqyCYEBWJ5flJRP8KuEKU5VZ5KShY6RhMF8xEzARBgoJkiaJk/IsZAEZFgNjb20xGTAXBgoJkiaJk/IsZAEZFgltaWNyb3NvZnQxLTArBgNVBAMTJE1pY3Jvc29mdCBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eYIQea0WoUqgpa1Mc1j0BxMuZTBQBgNVHR8ESTBHMEWgQ6BBhj9odHRwOi8vY3JsLm1pY3Jvc29mdC5jb20vcGtpL2NybC9wcm9kdWN0cy9taWNyb3NvZnRyb290Y2VydC5jcmwwVAYIKwYBBQUHAQEESDBGMEQGCCsGAQUFBzAChjhodHRwOi8vd3d3Lm1pY3Jvc29mdC5jb20vcGtpL2NlcnRzL01pY3Jvc29mdFJvb3RDZXJ0LmNydDATBgNVHSUEDDAKBggrBgEFBQcDCDANBgkqhkiG9w0BAQUFAAOCAgEAEJeKw1wDRDbd6bStd9vOeVFNAbEudHFbbQwTq86+e4+4LtQSooxtYrhXAstOIBNQmd16QOJXu69YmhzhHQGGrLt48ovQ7DsB7uK+jwoFyI1I4vBTFd1Pq5Lk541q1YDB5pTyBi+FA+mRKiQicPv2/OR4mS4N9wficLwYTp2OawpylbihOZxnLcVRDupiXD8WmIsgP+IHGjL5zDFKdjE9K3ILyOpwPf+FChPfwgphjvDXuBfrTot/xTUrXqO/67x9C0J71FNyIe4wyrt4ZVxbARcKFA7S2hSY9Ty5ZlizLS/n+YWGzFFW6J1wlGysOUzU9nm/qhh6YinvopspNAZ3GmLJPR5tH4LwC8csu89Ds+X57H2146SodDW4TsVxIxImdgs8UoxxWkZDFLyzs7BNZ8ifQv+AeSGAnhUwZuhCEl4ayJ4iIdBD6Svpu/RIzCzU2DKATCYqSCRfWupW76bemZ3KOm+9gSd0BhHudiG/m4LBJ1S2sWo9iaF2YbRuoROmv6pH8BJv/YoybLL+31HIjCPJZr2dHYcSZAI9La9Zj7jkIeW1sMpjtHhUBdRBLlCslLCleKuzoJZ1GtmShxN1Ii8yqAhuoFuMJb+g74TKIdbrHk/Jmu5J4PcBZW+JC33Iacjmbuqnl84xKf8OxVtc2E0bodj6L54/LlUWa8kTo/0=</X509Certificate></X509Data><CounterSignature ts-format="cms-timestamp-message" xmlns="http://schemas.microsoft.com/xmldsig/timestamp/2003">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</CounterSignature></Object></Signature></doc>
