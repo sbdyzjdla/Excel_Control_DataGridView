@@ -52,7 +52,6 @@
             this.combo_st = new System.Windows.Forms.ComboBox();
             this.combo_end = new System.Windows.Forms.ComboBox();
             this.btn_clear = new System.Windows.Forms.Button();
-            this.btn_save = new System.Windows.Forms.Button();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.panel1 = new System.Windows.Forms.Panel();
             this.button2 = new System.Windows.Forms.Button();
@@ -304,21 +303,6 @@
             this.btn_clear.UseVisualStyleBackColor = false;
             this.btn_clear.Click += new System.EventHandler(this.btn_clear_Click);
             // 
-            // btn_save
-            // 
-            this.btn_save.BackColor = System.Drawing.Color.Crimson;
-            this.btn_save.FlatAppearance.BorderSize = 0;
-            this.btn_save.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btn_save.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_save.ForeColor = System.Drawing.Color.White;
-            this.btn_save.Location = new System.Drawing.Point(432, 740);
-            this.btn_save.Name = "btn_save";
-            this.btn_save.Size = new System.Drawing.Size(97, 47);
-            this.btn_save.TabIndex = 12;
-            this.btn_save.Text = "저장";
-            this.btn_save.UseVisualStyleBackColor = false;
-            this.btn_save.Click += new System.EventHandler(this.btn_save_Click);
-            // 
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.Crimson;
@@ -404,7 +388,6 @@
             this.Controls.Add(this.btn_sf);
             this.Controls.Add(this.textBox_folder);
             this.Controls.Add(this.btn_shape);
-            this.Controls.Add(this.btn_save);
             this.Controls.Add(this.btn_clear);
             this.Controls.Add(this.combo_end);
             this.Controls.Add(this.combo_st);
@@ -437,7 +420,6 @@
         private System.Windows.Forms.ComboBox combo_st;
         private System.Windows.Forms.ComboBox combo_end;
         private System.Windows.Forms.Button btn_clear;
-        private System.Windows.Forms.Button btn_save;
         private System.ComponentModel.BackgroundWorker backgroundWorker1;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label label1;
