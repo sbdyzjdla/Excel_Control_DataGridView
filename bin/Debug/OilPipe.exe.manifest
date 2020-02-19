@@ -282,14 +282,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="OilPipe.exe" size="35840">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="OilPipe.exe" size="37376">
       <assemblyIdentity name="OilPipe" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>2uK352x5UwOBkVcIsZJL56W2+s+XcHKzRzyMNfD1u+E=</dsig:DigestValue>
+        <dsig:DigestValue>LDqpF9cedB/tqud2FmoC/tdSPFhoq+Fyg5exkwqpdGU=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

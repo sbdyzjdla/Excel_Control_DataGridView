@@ -59,6 +59,8 @@
             this.btn_shape = new System.Windows.Forms.Button();
             this.textBox_folder = new System.Windows.Forms.TextBox();
             this.btn_sf = new System.Windows.Forms.Button();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.label2 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
@@ -295,9 +297,9 @@
             this.btn_clear.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btn_clear.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_clear.ForeColor = System.Drawing.Color.White;
-            this.btn_clear.Location = new System.Drawing.Point(14, 740);
+            this.btn_clear.Location = new System.Drawing.Point(698, 393);
             this.btn_clear.Name = "btn_clear";
-            this.btn_clear.Size = new System.Drawing.Size(104, 47);
+            this.btn_clear.Size = new System.Drawing.Size(104, 39);
             this.btn_clear.TabIndex = 11;
             this.btn_clear.Text = "초기화";
             this.btn_clear.UseVisualStyleBackColor = false;
@@ -379,12 +381,31 @@
             this.btn_sf.UseVisualStyleBackColor = false;
             this.btn_sf.Click += new System.EventHandler(this.btn_sf_Click);
             // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(14, 760);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(778, 29);
+            this.progressBar1.TabIndex = 17;
+            this.progressBar1.Click += new System.EventHandler(this.progressBar1_Click);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(16, 740);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(109, 15);
+            this.label2.TabIndex = 18;
+            this.label2.Text = "Excel to Shape";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(949, 801);
+            this.ClientSize = new System.Drawing.Size(950, 808);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.btn_sf);
             this.Controls.Add(this.textBox_folder);
             this.Controls.Add(this.btn_shape);
@@ -441,6 +462,8 @@
         private System.Windows.Forms.Button btn_shape;
         private System.Windows.Forms.TextBox textBox_folder;
         private System.Windows.Forms.Button btn_sf;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Label label2;
     }
 }
 

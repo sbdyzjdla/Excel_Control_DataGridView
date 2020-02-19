@@ -1,0 +1,4 @@
+C:\Excel_Control_DataGridView\obj\Release\OilPipe.csprojAssemblyReference.cache
+C:\Excel_Control_DataGridView\obj\Release\OilPipe.Form1.resources
+C:\Excel_Control_DataGridView\obj\Release\OilPipe.Properties.Resources.resources
+C:\Excel_Control_DataGridView\obj\Release\OilPipe.csproj.GenerateResource.cache
