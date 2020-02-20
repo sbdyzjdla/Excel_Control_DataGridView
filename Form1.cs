@@ -83,7 +83,7 @@ namespace OilPipe
         {
             progressBar1.Style = ProgressBarStyle.Continuous;
             progressBar1.Minimum = 0;
-            //progressBar1.Maximum = 100;
+            progressBar1.Maximum = 100;
             progressBar1.Step = 1;
             progressBar1.Value = 0;
         }
@@ -175,8 +175,12 @@ namespace OilPipe
                         if (!combo_end.Items.Contains(rList[1])) { combo_end.Items.Add(rList[1]); }
                     }
                     countList = keyList.Count();
-                    textBox_folder.Text = Convert.ToString(countList);
+                    //textBox_folder.Text = Convert.ToString(countList);
                     keyList = keyList.Distinct().ToList();
+                    int keyListInt = Convert.ToInt32(keyList.Count());
+                    textBox_folder.Text = Convert.ToString(keyListInt);
+                    //progressBar1.Maximum = keyListInt * 2;
+                    progressBar1.Step = (100 / keyListInt) -1;
                 }));
             }));
             thread.Start();   // thread 실행하여 병렬작업 시작
@@ -375,6 +379,8 @@ namespace OilPipe
             int dRcnt = dataGridView1.Rows.Count - 1;
             int dCcnt = dataGridView1.Columns.Count;
 
+            textBox_status.AppendText("Shape파일을 생성합니다..." + "\r\n" + "\r\n");
+
             Driver driver = Ogr.GetDriverByName("ESRI Shapefile");
             DataSource data_source = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
 
@@ -397,7 +403,7 @@ namespace OilPipe
             {
                 //Ps
                 var layer = data_source.CreateLayer(temp_PS, srs, wkbGeometryType.wkbPoint, new string[] { "ENCODING=UTF-8" });
-
+                textBox_status.AppendText(psFilePath + ".shp 파일 생성" + "\r\n");
                 //string x_temp = dataGridView1.Rows[0].Cells[2].Value.ToString();
 
                 FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
@@ -424,7 +430,6 @@ namespace OilPipe
                 Feature ipFeature = new Feature(ftr);
                 string wktPointZ = "";
                 Geometry ipGeom = null;
-                progressBar1.Maximum = countList;
                 for (int i = 0; i < dRcnt; ++i)
                 {
                     wktPointZ = String.Format("POINT Z({0} {1} {2})", dataGridView1.Rows[i].Cells[2].Value.ToString(), dataGridView1.Rows[i].Cells[3].Value.ToString(),
@@ -477,6 +482,7 @@ namespace OilPipe
                     DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
 
                     var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
+                    textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
                     FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
                     FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
                     FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
@@ -508,13 +514,14 @@ namespace OilPipe
                         if (i == dRcnt - 1)
                         {
                             lineWKT = lineWKT + s_x + " " + s_y + ")";
-                        }
+                            progressBar1.PerformStep();
+                    }
                         else
                         {
-
                             lineWKT = lineWKT + s_x + " " + s_y + ",";
-                        }
-                        progressBar1.PerformStep();
+                            progressBar1.PerformStep();
+                    }
+                        
                     }
                     ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
                     ipFeature.SetGeometry(ipGeom);
@@ -529,7 +536,7 @@ namespace OilPipe
                     layer.Dispose();
                     data_source2.Dispose();
 
-                    System.IO.FileInfo film = new System.IO.FileInfo(path + "\\" + temp_LM + ".shp");
+                System.IO.FileInfo film = new System.IO.FileInfo(path + "\\" + temp_LM + ".shp");
                     if (film.Exists)
                     {
                         System.IO.File.Move(path + "\\" + temp_LM + ".shp", lmFilePath + ".shp");
@@ -538,26 +545,30 @@ namespace OilPipe
                         System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
                         System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
                     }
+                textBox_status.AppendText("\r\n" + "Shape파일 생성이 완료되었습니다.");
             }
         }
         private void progressBar1_Click(object sender, EventArgs e)
         {
 
         }
+
+       
+
         /*
-        private void KillSpecificExcelFileProcess(string excelFileName)
-        {
-            var processes = from p in Process.GetProcessesByName("EXCEL")
-                            select p;
+private void KillSpecificExcelFileProcess(string excelFileName)
+{
+   var processes = from p in Process.GetProcessesByName("EXCEL")
+                   select p;
 
-            foreach (var process in processes)
-            {
-                if (process.MainWindowTitle == "Microsoft Excel - " + excelFileName)
-                    process.Kill();
-            }
+   foreach (var process in processes)
+   {
+       if (process.MainWindowTitle == "Microsoft Excel - " + excelFileName)
+           process.Kill();
+   }
 
-        }
-        */
+}
+*/
 
         private void filter_false()
             {
@@ -567,7 +578,8 @@ namespace OilPipe
             string temp_LM = "UFL_OPIP_LM";
             string temp_PS = "UFL_OPIP_PS";
 
-
+            textBox_status.AppendText("Shape파일을 생성합니다..." + "\r\n" + "\r\n");
+            progressBar1.Maximum = countList * 2;
             for (int ckey = 0; ckey< keyList.Count(); ++ckey) {
                 
                 string[] setemp = keyList[ckey].Split(' ');
@@ -601,7 +613,7 @@ namespace OilPipe
                 {
                     //----------------  Make Ps start
                     var layer = data_source.CreateLayer(temp_PS, srs, wkbGeometryType.wkbPoint, new string[] { "ENCODING=UTF-8" });
-
+                    textBox_status.AppendText(psFilePath + ".shp 파일 생성" + "\r\n");
                     FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
                     FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
                     FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
@@ -626,7 +638,7 @@ namespace OilPipe
                     Feature ipFeature = new Feature(ftr);
                     string wktPointZ = "";
                     Geometry ipGeom = null;
-                    progressBar1.Maximum = countList*2;
+                    
                     for (; psIter < dRcnt; psIter++)
                     {
                         if (setemp[0] != dataGridView2.Rows[psIter].Cells[0].Value.ToString() || setemp[1] != dataGridView2.Rows[psIter].Cells[1].Value.ToString())
@@ -644,10 +656,10 @@ namespace OilPipe
                         ipFeature.SetField("Y", dataGridView2.Rows[psIter].Cells[3].Value.ToString());
                         ipFeature.SetField("Z", dataGridView2.Rows[psIter].Cells[4].Value.ToString());
                         layer.CreateFeature(ipFeature);
-                        progressBar1.PerformStep();
-                        label3.Text = progressBar1.Value.ToString() + "%";
+                        
                     }
-
+                    progressBar1.PerformStep();
+                    label3.Text = progressBar1.Value.ToString() + "%";
 
                     layer.CommitTransaction();
                     layer.SyncToDisk();
@@ -681,6 +693,7 @@ namespace OilPipe
                     //LM
                     DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
                     var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
+                    textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
                     FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
                     FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
                     FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
@@ -744,10 +757,12 @@ namespace OilPipe
                         System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
                         System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
                     }
+                    progressBar1.PerformStep();
+                    label3.Text = progressBar1.Value.ToString() + "%";
                     // --------------------- LM finish
                 }
             }
-            
+            textBox_status.AppendText("\r\n" + "Shape파일 생성이 완료되었습니다.");
         }   
         // ----------- filter_false end
 

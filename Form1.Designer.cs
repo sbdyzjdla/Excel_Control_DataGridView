@@ -62,6 +62,7 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
+            this.textBox_status = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
@@ -200,7 +201,7 @@
             this.dataGridView1.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.dataGridView1.RowHeadersWidth = 51;
             this.dataGridView1.RowTemplate.Height = 27;
-            this.dataGridView1.Size = new System.Drawing.Size(928, 287);
+            this.dataGridView1.Size = new System.Drawing.Size(928, 262);
             this.dataGridView1.TabIndex = 7;
             this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick_1);
             // 
@@ -352,9 +353,9 @@
             this.btn_shape.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btn_shape.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_shape.ForeColor = System.Drawing.Color.White;
-            this.btn_shape.Location = new System.Drawing.Point(833, 740);
+            this.btn_shape.Location = new System.Drawing.Point(833, 729);
             this.btn_shape.Name = "btn_shape";
-            this.btn_shape.Size = new System.Drawing.Size(102, 47);
+            this.btn_shape.Size = new System.Drawing.Size(102, 45);
             this.btn_shape.TabIndex = 14;
             this.btn_shape.Text = "Shape";
             this.btn_shape.UseVisualStyleBackColor = false;
@@ -384,16 +385,16 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(14, 760);
+            this.progressBar1.Location = new System.Drawing.Point(12, 729);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(778, 29);
+            this.progressBar1.Size = new System.Drawing.Size(800, 29);
             this.progressBar1.TabIndex = 17;
             this.progressBar1.Click += new System.EventHandler(this.progressBar1_Click);
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(16, 740);
+            this.label2.Location = new System.Drawing.Point(14, 709);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(109, 15);
             this.label2.TabIndex = 18;
@@ -402,17 +403,32 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(147, 740);
+            this.label3.Location = new System.Drawing.Point(145, 709);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(0, 19);
+            this.label3.Size = new System.Drawing.Size(0, 15);
             this.label3.TabIndex = 19;
+            // 
+            // textBox_status
+            // 
+            this.textBox_status.BackColor = System.Drawing.Color.White;
+            this.textBox_status.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.textBox_status.ForeColor = System.Drawing.SystemColors.HotTrack;
+            this.textBox_status.Location = new System.Drawing.Point(12, 774);
+            this.textBox_status.Multiline = true;
+            this.textBox_status.Name = "textBox_status";
+            this.textBox_status.ReadOnly = true;
+            this.textBox_status.Size = new System.Drawing.Size(800, 145);
+            this.textBox_status.TabIndex = 20;
+            this.textBox_status.Text = "엑셀파일과 저장경로를 설정하신뒤 Shape을 눌러주세요.\r\n경로를 필터링 하실경우 시점, 종점을 선택하신후 필터링을 누르시고\r\nShape 버튼을 " +
+    "눌러주세요.\r\n\r\n";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(950, 808);
+            this.ClientSize = new System.Drawing.Size(950, 933);
+            this.Controls.Add(this.textBox_status);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.progressBar1);
@@ -475,6 +491,7 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox textBox_status;
     }
 }
 
