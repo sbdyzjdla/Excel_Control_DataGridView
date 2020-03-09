@@ -46,5 +46,17 @@ namespace OilPipe.Properties {
                 this["FOLDER"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DEM {
+            get {
+                return ((string)(this["DEM"]));
+            }
+            set {
+                this["DEM"] = value;
+            }
+        }
     }
 }
