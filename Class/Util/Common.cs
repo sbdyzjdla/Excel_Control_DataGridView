@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OilPipe.Properties;
 
 namespace OilPipe.Class.Util
 {
@@ -47,8 +48,14 @@ namespace OilPipe.Class.Util
                 case "EXCEL":
                     Properties.Settings.Default.EXCEL = path;
                     break;
+                case "DEM":
+                    Properties.Settings.Default.DEM = path;
+                    break;
+                case "FOLDER":
+                    Properties.Settings.Default.FOLDER = path;
+                    break;
             }
-
+            Properties.Settings.Default.Save();
         }
 
         //마지막 선택 폴더 경로를 불러옴
@@ -62,7 +69,12 @@ namespace OilPipe.Class.Util
                 case "EXCEL":
                     directory = Properties.Settings.Default.EXCEL;
                     break;
-                
+                case "DEM":
+                    directory = Properties.Settings.Default.DEM;
+                    break;
+                case "FOLDER":
+                    directory = Properties.Settings.Default.FOLDER;
+                    break;
             }
 
             if (!directory.Equals(""))

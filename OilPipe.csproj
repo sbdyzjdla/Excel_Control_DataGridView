@@ -138,6 +138,7 @@
     <Compile Include="Class\Excel\ExcelControl.cs" />
     <Compile Include="Class\Util\Common.cs" />
     <Compile Include="Class\Util\GdalConfiguration.cs" />
+    <Compile Include="Class\Util\Progress.cs" />
     <Compile Include="Class\Util\RasterLayerInfo.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
