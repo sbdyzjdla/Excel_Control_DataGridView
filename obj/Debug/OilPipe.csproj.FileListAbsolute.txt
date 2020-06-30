@@ -233,3 +233,5 @@ C:\Excel_Control_DataGridView\obj\Debug\OilPipe.application
 C:\Excel_Control_DataGridView\obj\Debug\OilPipe.csproj.CopyComplete
 C:\Excel_Control_DataGridView\obj\Debug\OilPipe.exe
 C:\Excel_Control_DataGridView\obj\Debug\OilPipe.pdb
+C:\Excel_Control_DataGridView\obj\Debug\OilPipe.csproj.CoreCompileInputs.cache
+C:\Excel_Control_DataGridView\bin\Debug\MaterialSkin.dll

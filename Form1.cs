@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Reflection;
 using OilPipe.Class.Util;
+using OilPipe.Class.Excel;
+using OilPipe.Class.Shape;
 using Excel = Microsoft.Office.Interop.Excel;
 using OSGeo.GDAL;
 using OSGeo.OGR;
@@ -20,20 +22,29 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.ComponentModel;
+using MaterialSkin;
+using MaterialSkin.Controls;
 
 
 namespace OilPipe
 {
-    public partial class Form1 : Form
+    public partial class Form1 : MaterialForm
     {
         bool On;
         Point Pos;
         public Form1()
         {
             InitializeComponent();
-            MouseDown += (o, e) => { if (e.Button == MouseButtons.Left) { On = true; Pos = e.Location; } };
-            MouseMove += (o, e) => { if (On) Location = new Point(Location.X + (e.X - Pos.X), Location.Y + (e.Y - Pos.Y)); };
-            MouseUp += (o, e) => { if (e.Button == MouseButtons.Left) { On = false; Pos = e.Location; } };
+          
+            MaterialSkinManager materialSkinManager = MaterialSkinManager.Instance;
+            materialSkinManager.AddFormToManage(this);
+            materialSkinManager.Theme = MaterialSkinManager.Themes.LIGHT;
+
+            materialSkinManager.ColorScheme = new ColorScheme(
+                    Primary.Purple400, Primary.Purple500,
+                    Primary.Blue500, Accent.LightBlue200,
+                    TextShade.WHITE
+                );
 
             Progress.progress_init(progressBar1);
         }
@@ -132,273 +143,52 @@ namespace OilPipe
 
         private void btn_run_Click(object sender, EventArgs e)
         {
-            ap = new Microsoft.Office.Interop.Excel.Application();
-            string directory = Properties.Settings.Default.EXCEL;
-            workbook = ap.Workbooks.Open(Filename: directory);
-            Excel.Worksheet worksheet = (Excel.Worksheet)workbook.Worksheets.get_Item(1);
-
-            //첫번째 Worksheet를 선택합니다.
-            Excel.Range rng = worksheet.UsedRange;
-            DataTable table = new DataTable();
-
-            // 현재 Worksheet에서 사용된 셀 전체를 선택합니다.
-            object[,] data = rng.Value;
-
-            int rCnt = rng.Rows.Count;
-            int cCnt = rng.Columns.Count;
-
-            Thread thread = new Thread(new ThreadStart(delegate () // thread create
+            if (textBox_excel.Text == "")
             {
-                this.Invoke(new Action(delegate () //this == Form  ,  Form이 아닌 컨트롤의 Invoke를 직접호출해도 무방
-                {
-                    for (int i = 2; i < rCnt; ++i)
-                    {
-                        rList.Clear();
-                        for (int j = 1; j < cCnt; ++j)
-                        {
-                            string rData = Convert.ToString(data[i, j]);
-                            rList.Add(rData);
-
-                        }
-                        if (rList[0] == "") { break; }
-                        dataGridView2.Rows.Add(rList[0], rList[1], rList[2], rList[3], rList[4], rList[5]);
-                        keyList.Add(rList[0] + " " + rList[1]);
-                        if (!combo_st.Items.Contains(rList[0])) { combo_st.Items.Add(rList[0]); }
-                        if (!combo_end.Items.Contains(rList[1])) { combo_end.Items.Add(rList[1]); }
-
-                    }
-                    countList = keyList.Count();
-                    keyList = keyList.Distinct().ToList();
-                    int keyListInt = Convert.ToInt32(keyList.Count());
-                    textBox_folder.Text = Convert.ToString(keyListInt);
-                    progressBar1.Step = (100 / keyListInt) - 1;
-                }));
-            }));
-            thread.Start();   // thread 실행하여 병렬작업 시작
-            wbclose = true;
-
-            /*
-            //DEM Raster
-            String dem_path = textBox_dem.Text;
-            RasterLayerInfo rasterLayerInfo_dem = new RasterLayerInfo(dem_path);
-
-            int dRcnt = dataGridView2.Rows.Count - 1;
-            int dCcnt = dataGridView2.Columns.Count;
-
-            for (int i = 0; i < dRcnt; ++i)
+                MessageBox.Show("Excel 파일을 선택하세요");
+            } else if(textBox_dem.Text == "") {
+                MessageBox.Show("DEM 파일을 선택하세요");
+            } 
+            else
             {
-                double raster_X = Convert.ToDouble(dataGridView2.Rows[i].Cells[2].Value);
-                double raster_Y = Convert.ToDouble(dataGridView2.Rows[i].Cells[3].Value);
-                double raster_Z = Convert.ToDouble(dataGridView2.Rows[i].Cells[4].Value);
-                double oilDept = rasterLayerInfo_dem.getHeight(raster_X, raster_Y);
-                double depth = oilDept - raster_Z;
-                double dep = oilDept - raster_Z;
-                dep = Math.Abs(dep);
-                string dep_st = Convert.ToString(dep);
+                ap = new Microsoft.Office.Interop.Excel.Application();
+                string directory = Properties.Settings.Default.EXCEL;
+                workbook = ap.Workbooks.Open(Filename: directory);
+                Excel.Worksheet worksheet = (Excel.Worksheet)workbook.Worksheets.get_Item(1);
 
-                dataGridView1.Rows.Add(dataGridView2.Rows[i].Cells[0].Value, dataGridView2.Rows[i].Cells[1].Value, dataGridView2.Rows[i].Cells[2].Value
-                    , dataGridView2.Rows[i].Cells[3].Value, dataGridView2.Rows[i].Cells[4].Value, oilDept, dep_st);
+                //첫번째 Worksheet를 선택합니다.
+                Excel.Range rng = worksheet.UsedRange;
+                DataTable table = new DataTable();
 
+                // 현재 Worksheet에서 사용된 셀 전체를 선택합니다.
+                object[,] data = rng.Value;
+
+                int rCnt = rng.Rows.Count;
+                int cCnt = rng.Columns.Count;
+
+                ExcelControl excelControl = new ExcelControl();
+                excelControl.addGrid(rCnt, cCnt, data, dataGridView2, combo_st, combo_end, textBox_folder, progressBar1);
+                keyList = excelControl.keylist();
+                wbclose = true;
             }
-            int psIter = 0;
-            int lmIter = 0;
-
-            string temp_LM = "UFL_OPIP_LM";
-            string temp_PS = "UFL_OPIP_PS";
-
-            textBox_status.AppendText("Shape파일을 생성합니다..." + "\r\n" + "\r\n");
-            progressBar1.Maximum = countList * 2;
-            for (int ckey = 0; ckey < keyList.Count(); ++ckey)
-            {
-
-                string[] setemp = keyList[ckey].Split(' ');
-
-                string path = textBox_folder.Text;
-
-                string save_LM = "UFL_OPIP_LM" + setemp[0] + setemp[1];
-                string save_PS = "UFL_OPIP_PS" + setemp[0] + setemp[1];
-                string psFilePath = path + "\\" + save_PS;
-                string lmFilePath = path + "\\" + save_LM;
-
-                Driver driver = Ogr.GetDriverByName("ESRI Shapefile");
-                DataSource data_source = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
-
-                OSGeo.OSR.SpatialReference srs = new OSGeo.OSR.SpatialReference("");
-                srs.ImportFromEPSG(5186);
-
-                System.IO.FileInfo fi = new System.IO.FileInfo(psFilePath + ".shp");
-                if (fi.Exists)
-                {
-                    MessageBox.Show("파일이 있습니다");
-                    File.Delete(psFilePath + ".prj");
-                    File.Delete(psFilePath + ".shp");
-                    File.Delete(psFilePath + ".dbf");
-                    File.Delete(psFilePath + ".shx");
-
-                }
-                else
-                {
-                    //----------------  Make Ps start
-                    var layer = data_source.CreateLayer(temp_PS, srs, wkbGeometryType.wkbPoint, new string[] { "ENCODING=UTF-8" });
-                    textBox_status.AppendText(psFilePath + ".shp 파일 생성" + "\r\n");
-                    FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
-                    FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
-                    FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
-                    FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
-                    FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
-                    FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
-                    FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
-                    FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
-
-                    layer.CreateField(ftr_cde, 1);
-                    layer.CreateField(hjd_cde, 1);
-                    layer.CreateField(pip_dep, 1);
-                    layer.CreateField(start_point, 1);
-                    layer.CreateField(end_point, 1);
-                    layer.CreateField(field_x, 1);
-                    layer.CreateField(field_y, 1);
-                    layer.CreateField(field_z, 1);
-
-                    FeatureDefn ftr = layer.GetLayerDefn();
-                    //FeatureDefn ftr = new FeatureDefn(null);
-                    ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
-                    Feature ipFeature = new Feature(ftr);
-                    string wktPointZ = "";
-                    Geometry ipGeom = null;
-
-                    for (; psIter < dRcnt; psIter++)
-                    {
-                        if (setemp[0] != dataGridView2.Rows[psIter].Cells[0].Value.ToString() || setemp[1] != dataGridView2.Rows[psIter].Cells[1].Value.ToString())
-                            break;
-                        wktPointZ = String.Format("POINT Z({0} {1} {2})", dataGridView2.Rows[psIter].Cells[2].Value.ToString(), dataGridView2.Rows[psIter].Cells[3].Value.ToString(),
-                            dataGridView2.Rows[psIter].Cells[4].Value.ToString());
-                        ipGeom = Ogr.CreateGeometryFromWkt(ref wktPointZ, srs);
-                        ipFeature.SetGeometry(ipGeom);
-                        ipFeature.SetField("FTR_CDE", "SF900");
-                        ipFeature.SetField("HJD_CDE", "");
-                        ipFeature.SetField("PIP_DEP", dataGridView1.Rows[psIter].Cells[5].Value.ToString());
-                        ipFeature.SetField("시점", dataGridView1.Rows[psIter].Cells[0].Value.ToString());
-                        ipFeature.SetField("종점", dataGridView1.Rows[psIter].Cells[1].Value.ToString());
-                        ipFeature.SetField("X", dataGridView1.Rows[psIter].Cells[2].Value.ToString());
-                        ipFeature.SetField("Y", dataGridView1.Rows[psIter].Cells[3].Value.ToString());
-                        ipFeature.SetField("Z", dataGridView1.Rows[psIter].Cells[4].Value.ToString());
-                        layer.CreateFeature(ipFeature);
-
-                    }
-                    progressBar1.PerformStep();
-                    label3.Text = progressBar1.Value.ToString() + "%";
-
-                    layer.CommitTransaction();
-                    layer.SyncToDisk();
-                    layer.Dispose();
-                    data_source.Dispose();
-
-                    System.IO.FileInfo fil = new System.IO.FileInfo(path + "\\" + temp_PS + ".shp");
-                    if (fil.Exists)
-                    {
-                        System.IO.File.Move(path + "\\" + temp_PS + ".shp", psFilePath + ".shp");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".cpg", psFilePath + ".cpg");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".dbf", psFilePath + ".dbf");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".prj", psFilePath + ".prj");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".shx", psFilePath + ".shx");
-                    }
-                }  // --------------  PS finish
-
-                //------------------------- Make LM start
-                System.IO.FileInfo fLM = new System.IO.FileInfo(lmFilePath + ".shp");
-                if (fLM.Exists)
-                {
-                    MessageBox.Show(lmFilePath + "이 있습니다");
-                    File.Delete(lmFilePath + ".prj");
-                    File.Delete(lmFilePath + ".shp");
-                    File.Delete(lmFilePath + ".dbf");
-                    File.Delete(lmFilePath + ".shx");
-                }
-                else
-                {
-
-                    //LM
-                    DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
-                    var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
-                    textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
-                    FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
-                    FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
-                    FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
-                    FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
-                    FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
-                    FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
-                    FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
-                    FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
-
-                    layer.CreateField(ftr_cde, 1);
-                    layer.CreateField(hjd_cde, 1);
-                    layer.CreateField(pip_dep, 1);
-                    layer.CreateField(start_point, 1);
-                    layer.CreateField(end_point, 1);
-                    layer.CreateField(field_x, 1);
-                    layer.CreateField(field_y, 1);
-                    layer.CreateField(field_z, 1);
-                    FeatureDefn ftr = layer.GetLayerDefn();
-
-                    ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
-                    Feature ipFeature = new Feature(ftr);
-                    Geometry ipGeom = null;
-                    string lineWKT = "LINESTRING (";
-                    for (; lmIter < dRcnt; lmIter++)
-                    {
-                        string s_x = dataGridView1.Rows[lmIter].Cells[2].Value.ToString();
-                        string s_y = dataGridView1.Rows[lmIter].Cells[3].Value.ToString();
-                        if (lmIter == (psIter - 1))
-                        {
-                            lineWKT = lineWKT + s_x + " " + s_y + ")";
-                            lmIter++;
-                            break;
-                        }
-                        else
-                        {
-
-                            lineWKT = lineWKT + s_x + " " + s_y + ",";
-                        }
-                        progressBar1.PerformStep();
-                        label3.Text = progressBar1.Value.ToString() + "%";
-                    }
-                    ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
-                    ipFeature.SetGeometry(ipGeom);
-                    ipFeature.SetField("FTR_CDE", "SF900");
-                    ipFeature.SetField("HJD_CDE", "");
-                    ipFeature.SetField("PIP_DEP", dataGridView1.Rows[0].Cells[5].Value.ToString());
-                    ipFeature.SetField("시점", dataGridView1.Rows[0].Cells[0].Value.ToString());
-                    ipFeature.SetField("종점", dataGridView1.Rows[0].Cells[1].Value.ToString());
-                    layer.CreateFeature(ipFeature);
-                    layer.CommitTransaction();
-                    layer.SyncToDisk();
-                    layer.Dispose();
-                    data_source2.Dispose();
-
-                    System.IO.FileInfo film = new System.IO.FileInfo(path + "\\" + temp_LM + ".shp");
-                    if (film.Exists)
-                    {
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shp", lmFilePath + ".shp");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".cpg", lmFilePath + ".cpg");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".dbf", lmFilePath + ".dbf");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
-                    }
-                    progressBar1.PerformStep();
-                    label3.Text = progressBar1.Value.ToString() + "%";
-                    // --------------------- LM finish
-                }
-            }
-            textBox_status.AppendText("\r\n" + "Shape파일 생성이 완료되었습니다.");
-            */
-
         }
-       
+
 
         private void btn_clear_Click(object sender, EventArgs e)
         {
             dataGridView1.Rows.Clear();
             dataGridView1.Refresh();
+        }
+
+        // Thread Testing
+        private long Calc(long cnt)
+        {
+            long result = 0;
+            for(long i=0; i< cnt; i++)
+            {
+                result += 2;
+            }
+            return result;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -423,6 +213,8 @@ namespace OilPipe
             List<string> rList = new List<string>();
             double dem = 0.0, d_z = 0.0;
             string rData = "";
+
+            RasterLayerInfo rasterLayerInfo = new RasterLayerInfo(Properties.Settings.Default.DEM);
 
             Thread thread = new Thread(new ThreadStart(delegate () // thread create
             {
@@ -450,90 +242,32 @@ namespace OilPipe
                         }
                         if (rList[0] == comboStart && rList[1] == comboEnd)
                         {
+                            double raster_X = Convert.ToDouble(rList[2]);
+                            double raster_Y = Convert.ToDouble(rList[3]);
+
+                            dem = rasterLayerInfo.getHeight(raster_X, raster_Y);
                             double dep = dem - d_z;
                             dep = Math.Abs(dep);
                             string dep_st = Convert.ToString(dep);
                             rList.Add(dep_st);
-                            dataGridView1.Rows.Add(rList[0], rList[1], rList[2], rList[3], rList[4], rList[5], rList[6]);
+                            dataGridView1.Rows.Add(rList[0], rList[1], rList[2], rList[3], rList[4], dem, dep_st);
                         }
                         filtering = true;
                     }
                 }));
             }));
             thread.Start();   // thread 실행하여 병렬작업 시작
-        }
-
-        private static void releaseObject(object obj)
-         //region memory deallocate
-        {
-            try
-            {
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
-                obj = null;
-            }
-            catch (Exception e)
-            {
-                obj = null;
-            }
-            finally
-            {
-                GC.Collect();
-            }
-        }
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            if (wbclose == true)
-            {
-                workbook.Close(false);
-                ap.Quit();
-                Application.Exit();
-            } else
-            {
-                Application.Exit();
-            }
-        }
-
-        private void panel1_MouseDown(object sender, MouseEventArgs e)
-        {
-            mousing = true;
-            startX = e.X;
-            startY = e.Y; 
-        }
-
-        private void panel1_MouseUp(object sender, MouseEventArgs e)
-        {
-            mousing = false;
-        }
-
-        private void panel1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if(mousing)
-            {
-                int changeX = e.X - startX;
-                int changeY = e.Y - startY;
-
-                panel1.Location = new System.Drawing.Point(panel1.Location.X + changeX, panel1.Location.Y + changeY);
-            }
-        }
-
-        private void textBox_folder_TextChanged(object sender, EventArgs e)
-        {
-
+            wbclose = true;
         }
 
         private void btn_shape_Click(object sender, EventArgs e)
         {
-           if(filtering)
+            if (filtering)
             {
                 filter_true();
-                
-            } else
+
+            }
+            else
             {
                 filter_false();
             }
@@ -546,8 +280,8 @@ namespace OilPipe
             comboStart = dataGridView1.Rows[0].Cells[0].Value.ToString();
             comboEnd = dataGridView1.Rows[0].Cells[1].Value.ToString();
 
-            string save_LM = "UFL_OPIP_LM" + "_"  + comboStart + "_" + comboEnd;
-            string save_PS = "UFL_OPIP_PS" + "_"  + comboStart + "_" + comboEnd;
+            string save_LM = "UFL_OPIP_LM" + "_" + comboStart + "_" + comboEnd;
+            string save_PS = "UFL_OPIP_PS" + "_" + comboStart + "_" + comboEnd;
             string temp_LM = "UFL_OPIP_LM";
             string temp_PS = "UFL_OPIP_PS";
             string psFilePath = path + "\\" + save_PS;
@@ -627,10 +361,10 @@ namespace OilPipe
                 layer.Dispose();
                 data_source.Dispose();
 
-                System.IO.FileInfo fil = new System.IO.FileInfo(path+ "\\" +temp_PS+".shp");
+                System.IO.FileInfo fil = new System.IO.FileInfo(path + "\\" + temp_PS + ".shp");
                 if (fil.Exists)
                 {
-                    System.IO.File.Move(path+"\\" + temp_PS + ".shp", psFilePath + ".shp");
+                    System.IO.File.Move(path + "\\" + temp_PS + ".shp", psFilePath + ".shp");
                     System.IO.File.Move(path + "\\" + temp_PS + ".cpg", psFilePath + ".cpg");
                     System.IO.File.Move(path + "\\" + temp_PS + ".dbf", psFilePath + ".dbf");
                     System.IO.File.Move(path + "\\" + temp_PS + ".prj", psFilePath + ".prj");
@@ -638,348 +372,157 @@ namespace OilPipe
                 }
             }
 
-                
+
+            //LM
+            System.IO.FileInfo fLM = new System.IO.FileInfo(lmFilePath + ".shp");
+            if (fLM.Exists)
+            {
+                MessageBox.Show(lmFilePath + "이 있습니다");
+                File.Delete(lmFilePath + ".prj");
+                File.Delete(lmFilePath + ".shp");
+                File.Delete(lmFilePath + ".dbf");
+                File.Delete(lmFilePath + ".shx");
+            }
+            else
+            {
                 //LM
-                System.IO.FileInfo fLM = new System.IO.FileInfo(lmFilePath + ".shp");
-                if (fLM.Exists)
+                DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
+
+                var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
+                textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
+                FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
+                FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
+                FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
+                FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
+                FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
+                FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
+                FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
+                FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
+
+                layer.CreateField(ftr_cde, 1);
+                layer.CreateField(hjd_cde, 1);
+                layer.CreateField(pip_dep, 1);
+                layer.CreateField(start_point, 1);
+                layer.CreateField(end_point, 1);
+                layer.CreateField(field_x, 1);
+                layer.CreateField(field_y, 1);
+                layer.CreateField(field_z, 1);
+                FeatureDefn ftr = layer.GetLayerDefn();
+                //FeatureDefn ftr = new FeatureDefn(null);
+
+                ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
+                Feature ipFeature = new Feature(ftr);
+                Geometry ipGeom = null;
+                string lineWKT = "LINESTRING (";
+                for (int i = 0; i < dRcnt; ++i)
                 {
-                    MessageBox.Show(lmFilePath + "이 있습니다");
-                    File.Delete(lmFilePath + ".prj");
-                    File.Delete(lmFilePath + ".shp");
-                    File.Delete(lmFilePath + ".dbf");
-                    File.Delete(lmFilePath + ".shx");
-                }
-                else
-                {
-                    //LM
-                    DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
-
-                    var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
-                    textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
-                    FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
-                    FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
-                    FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
-                    FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
-                    FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
-                    FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
-                    FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
-                    FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
-
-                    layer.CreateField(ftr_cde, 1);
-                    layer.CreateField(hjd_cde, 1);
-                    layer.CreateField(pip_dep, 1);
-                    layer.CreateField(start_point, 1);
-                    layer.CreateField(end_point, 1);
-                    layer.CreateField(field_x, 1);
-                    layer.CreateField(field_y, 1);
-                    layer.CreateField(field_z, 1);
-                    FeatureDefn ftr = layer.GetLayerDefn();
-                    //FeatureDefn ftr = new FeatureDefn(null);
-
-                    ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
-                    Feature ipFeature = new Feature(ftr);
-                    Geometry ipGeom = null;
-                    string lineWKT = "LINESTRING (";
-                    for (int i = 0; i < dRcnt; ++i)
+                    string s_x = dataGridView1.Rows[i].Cells[2].Value.ToString();
+                    string s_y = dataGridView1.Rows[i].Cells[3].Value.ToString();
+                    if (i == dRcnt - 1)
                     {
-                        string s_x = dataGridView1.Rows[i].Cells[2].Value.ToString();
-                        string s_y = dataGridView1.Rows[i].Cells[3].Value.ToString();
-                        if (i == dRcnt - 1)
-                        {
-                            lineWKT = lineWKT + s_x + " " + s_y + ")";
-                            progressBar1.PerformStep();
+                        lineWKT = lineWKT + s_x + " " + s_y + ")";
+                        progressBar1.PerformStep();
                     }
-                        else
-                        {
-                            lineWKT = lineWKT + s_x + " " + s_y + ",";
-                            progressBar1.PerformStep();
+                    else
+                    {
+                        lineWKT = lineWKT + s_x + " " + s_y + ",";
+                        progressBar1.PerformStep();
                     }
-                        
-                    }
-                    ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
-                    ipFeature.SetGeometry(ipGeom);
-                    ipFeature.SetField("FTR_CDE", "SF900");
-                    ipFeature.SetField("HJD_CDE", "");
-                    ipFeature.SetField("PIP_DEP", "");
-                    ipFeature.SetField("시점", dataGridView1.Rows[0].Cells[0].Value.ToString());
-                    ipFeature.SetField("종점", dataGridView1.Rows[0].Cells[1].Value.ToString());
-                    layer.CreateFeature(ipFeature);
-                    layer.CommitTransaction();
-                    layer.SyncToDisk();
-                    layer.Dispose();
-                    data_source2.Dispose();
+
+                }
+                ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
+                ipFeature.SetGeometry(ipGeom);
+                ipFeature.SetField("FTR_CDE", "SF900");
+                ipFeature.SetField("HJD_CDE", "");
+                ipFeature.SetField("PIP_DEP", "");
+                ipFeature.SetField("시점", dataGridView1.Rows[0].Cells[0].Value.ToString());
+                ipFeature.SetField("종점", dataGridView1.Rows[0].Cells[1].Value.ToString());
+                layer.CreateFeature(ipFeature);
+                layer.CommitTransaction();
+                layer.SyncToDisk();
+                layer.Dispose();
+                data_source2.Dispose();
 
                 System.IO.FileInfo film = new System.IO.FileInfo(path + "\\" + temp_LM + ".shp");
-                    if (film.Exists)
-                    {
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shp", lmFilePath + ".shp");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".cpg", lmFilePath + ".cpg");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".dbf", lmFilePath + ".dbf");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
-                    }
+                if (film.Exists)
+                {
+                    System.IO.File.Move(path + "\\" + temp_LM + ".shp", lmFilePath + ".shp");
+                    System.IO.File.Move(path + "\\" + temp_LM + ".cpg", lmFilePath + ".cpg");
+                    System.IO.File.Move(path + "\\" + temp_LM + ".dbf", lmFilePath + ".dbf");
+                    System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
+                    System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
+                }
                 textBox_status.AppendText("\r\n" + "Shape파일 생성이 완료되었습니다.");
             }
         }
-        
 
-    private void filter_false()
+        // ---------------------------------- filiter_false start ----------------------------------------------
+        private void filter_false()
+        {
+            ToShape toShape = new ToShape();
+            toShape.filter_false(textBox_status, textBox_folder, progressBar1, dataGridView2, label3, countList, keyList);
+           
+        } 
+        // ---------------------------------- filter_false end  -------------------------------------------------
+
+        private static void releaseObject(object obj)
+         //region memory deallocate
+        {
+            try
             {
-            int psIter = 0;
-            int lmIter = 0;
-
-            string temp_LM = "UFL_OPIP_LM";
-            string temp_PS = "UFL_OPIP_PS";
-
-            textBox_status.AppendText("Shape파일을 생성합니다..." + "\r\n" + "\r\n");
-            progressBar1.Maximum = countList * 2;
-            for (int ckey = 0; ckey< keyList.Count(); ++ckey) {
-                
-                string[] setemp = keyList[ckey].Split(' ');
-                
-                string path = textBox_folder.Text;
-
-                string save_LM = "UFL_OPIP_LM" + setemp[0] + setemp[1];
-                string save_PS = "UFL_OPIP_PS" + setemp[0] + setemp[1];
-                string psFilePath = path + "\\" + save_PS;
-                string lmFilePath = path + "\\" + save_LM;
-                int dRcnt = dataGridView2.Rows.Count - 1;
-                int dCcnt = dataGridView2.Columns.Count;
-
-                Driver driver = Ogr.GetDriverByName("ESRI Shapefile");
-                DataSource data_source = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
-
-                OSGeo.OSR.SpatialReference srs = new OSGeo.OSR.SpatialReference("");
-                srs.ImportFromEPSG(5186);
-
-                System.IO.FileInfo fi = new System.IO.FileInfo(psFilePath + ".shp");
-                if (fi.Exists)
-                {
-                    MessageBox.Show("파일이 있습니다");
-                    File.Delete(psFilePath + ".prj");
-                    File.Delete(psFilePath + ".shp");
-                    File.Delete(psFilePath + ".dbf");
-                    File.Delete(psFilePath + ".shx");
-
-                }
-                else
-                {
-                    //----------------  Make Ps start
-                    var layer = data_source.CreateLayer(temp_PS, srs, wkbGeometryType.wkbPoint, new string[] { "ENCODING=UTF-8" });
-                    textBox_status.AppendText(psFilePath + ".shp 파일 생성" + "\r\n");
-                    FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
-                    FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
-                    FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
-                    FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
-                    FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
-                    FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
-                    FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
-                    FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
-
-                    layer.CreateField(ftr_cde, 1);
-                    layer.CreateField(hjd_cde, 1);
-                    layer.CreateField(pip_dep, 1);
-                    layer.CreateField(start_point, 1);
-                    layer.CreateField(end_point, 1);
-                    layer.CreateField(field_x, 1);
-                    layer.CreateField(field_y, 1);
-                    layer.CreateField(field_z, 1);
-
-                    FeatureDefn ftr = layer.GetLayerDefn();
-                    //FeatureDefn ftr = new FeatureDefn(null);
-                    ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
-                    Feature ipFeature = new Feature(ftr);
-                    string wktPointZ = "";
-                    Geometry ipGeom = null;
-                    
-                    for (; psIter < dRcnt; psIter++)
-                    {
-                        if (setemp[0] != dataGridView2.Rows[psIter].Cells[0].Value.ToString() || setemp[1] != dataGridView2.Rows[psIter].Cells[1].Value.ToString())
-                            break;
-                        wktPointZ = String.Format("POINT Z({0} {1} {2})", dataGridView2.Rows[psIter].Cells[2].Value.ToString(), dataGridView2.Rows[psIter].Cells[3].Value.ToString(),
-                            dataGridView2.Rows[psIter].Cells[4].Value.ToString());
-                        ipGeom = Ogr.CreateGeometryFromWkt(ref wktPointZ, srs);
-                        ipFeature.SetGeometry(ipGeom);
-                        ipFeature.SetField("FTR_CDE", "SF900");
-                        ipFeature.SetField("HJD_CDE", "");
-                        ipFeature.SetField("PIP_DEP", "");
-                        ipFeature.SetField("시점", dataGridView2.Rows[psIter].Cells[0].Value.ToString());
-                        ipFeature.SetField("종점", dataGridView2.Rows[psIter].Cells[1].Value.ToString());
-                        ipFeature.SetField("X", dataGridView2.Rows[psIter].Cells[2].Value.ToString());
-                        ipFeature.SetField("Y", dataGridView2.Rows[psIter].Cells[3].Value.ToString());
-                        ipFeature.SetField("Z", dataGridView2.Rows[psIter].Cells[4].Value.ToString());
-                        layer.CreateFeature(ipFeature);
-                        
-                    }
-                    progressBar1.PerformStep();
-                    label3.Text = progressBar1.Value.ToString() + "%";
-
-                    layer.CommitTransaction();
-                    layer.SyncToDisk();
-                    layer.Dispose();
-                    data_source.Dispose();
-
-                    System.IO.FileInfo fil = new System.IO.FileInfo(path + "\\" + temp_PS + ".shp");
-                    if (fil.Exists)
-                    {
-                        System.IO.File.Move(path + "\\" + temp_PS + ".shp", psFilePath + ".shp");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".cpg", psFilePath + ".cpg");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".dbf", psFilePath + ".dbf");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".prj", psFilePath + ".prj");
-                        System.IO.File.Move(path + "\\" + temp_PS + ".shx", psFilePath + ".shx");
-                    }
-                }  // --------------  PS finish
-
-                //------------------------- Make LM start
-                System.IO.FileInfo fLM = new System.IO.FileInfo(lmFilePath + ".shp");
-                if (fLM.Exists)
-                {
-                    MessageBox.Show(lmFilePath + "이 있습니다");
-                    File.Delete(lmFilePath + ".prj");
-                    File.Delete(lmFilePath + ".shp");
-                    File.Delete(lmFilePath + ".dbf");
-                    File.Delete(lmFilePath + ".shx");
-                }
-                else
-                {
-
-                    //LM
-                    DataSource data_source2 = driver.CreateDataSource(path, new string[] { "ENCODING=UTF-8" });
-                    var layer = data_source2.CreateLayer(temp_LM, srs, wkbGeometryType.wkbLineString, new string[] { "ENCODING=UTF-8" });
-                    textBox_status.AppendText(lmFilePath + ".shp 파일 생성" + "\r\n");
-                    FieldDefn ftr_cde = new FieldDefn("FTR_CDE", FieldType.OFTString);
-                    FieldDefn hjd_cde = new FieldDefn("HJD_CDE", FieldType.OFTString);
-                    FieldDefn pip_dep = new FieldDefn("PIP_DEP", FieldType.OFTReal);
-                    FieldDefn start_point = new FieldDefn("시점", FieldType.OFTString);
-                    FieldDefn end_point = new FieldDefn("종점", FieldType.OFTString);
-                    FieldDefn field_x = new FieldDefn("X", FieldType.OFTReal);
-                    FieldDefn field_y = new FieldDefn("Y", FieldType.OFTReal);
-                    FieldDefn field_z = new FieldDefn("Z", FieldType.OFTReal);
-
-                    layer.CreateField(ftr_cde, 1);
-                    layer.CreateField(hjd_cde, 1);
-                    layer.CreateField(pip_dep, 1);
-                    layer.CreateField(start_point, 1);
-                    layer.CreateField(end_point, 1);
-                    layer.CreateField(field_x, 1);
-                    layer.CreateField(field_y, 1);
-                    layer.CreateField(field_z, 1);
-                    FeatureDefn ftr = layer.GetLayerDefn();
-
-                    ftr.SetGeomType(layer.GetLayerDefn().GetGeomType());
-                    Feature ipFeature = new Feature(ftr);
-                    Geometry ipGeom = null;
-                    string lineWKT = "LINESTRING (";
-                    for (; lmIter < dRcnt; lmIter++)
-                    {
-                        string s_x = dataGridView2.Rows[lmIter].Cells[2].Value.ToString();
-                        string s_y = dataGridView2.Rows[lmIter].Cells[3].Value.ToString();
-                        if (lmIter == (psIter-1))
-                        {
-                            lineWKT = lineWKT + s_x + " " + s_y + ")";
-                            lmIter++;
-                            break;
-                        }
-                        else
-                        {
-
-                            lineWKT = lineWKT + s_x + " " + s_y + ",";
-                        }
-                        progressBar1.PerformStep();
-                        label3.Text = progressBar1.Value.ToString() + "%";
-                    }
-                    ipGeom = Ogr.CreateGeometryFromWkt(ref lineWKT, srs);
-                    ipFeature.SetGeometry(ipGeom);
-                    ipFeature.SetField("FTR_CDE", "SF900");
-                    ipFeature.SetField("HJD_CDE", "");
-                    ipFeature.SetField("PIP_DEP", "");
-                    ipFeature.SetField("시점", dataGridView2.Rows[0].Cells[0].Value.ToString());
-                    ipFeature.SetField("종점", dataGridView2.Rows[0].Cells[1].Value.ToString());
-                    layer.CreateFeature(ipFeature);
-                    layer.CommitTransaction();
-                    layer.SyncToDisk();
-                    layer.Dispose();
-                    data_source2.Dispose();
-
-                    System.IO.FileInfo film = new System.IO.FileInfo(path + "\\" + temp_LM + ".shp");
-                    if (film.Exists)
-                    {
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shp", lmFilePath + ".shp");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".cpg", lmFilePath + ".cpg");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".dbf", lmFilePath + ".dbf");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".prj", lmFilePath + ".prj");
-                        System.IO.File.Move(path + "\\" + temp_LM + ".shx", lmFilePath + ".shx");
-                    }
-                    progressBar1.PerformStep();
-                    label3.Text = progressBar1.Value.ToString() + "%";
-                    // --------------------- LM finish
-                }
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+                obj = null;
             }
-            textBox_status.AppendText("\r\n" + "Shape파일 생성이 완료되었습니다.");
+            catch (Exception e)
+            {
+                obj = null;
+            }
+            finally
+            {
+                GC.Collect();
+            }
         }
-        // ----------- filter_false end
-        private void dataGridView1_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
+
+        private void button2_Click(object sender, EventArgs e)
         {
-
+            if (wbclose == true)
+            {
+                workbook.Close(false);
+                ap.Quit();
+                Application.Exit();
+            } else
+            {
+                Application.Exit();
+            }
         }
-        private void textBox_status_TextChanged(object sender, EventArgs e)
-        {
+       
 
-        }
-
-
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-
-        }
-
-        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-
-        }
-
-        private void groupBox1_Enter(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-        private void progressBar1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textBox_status_TextChanged_1(object sender, EventArgs e)
-        {
-
-        }
+       
 
         private void button3_Click(object sender, EventArgs e)
         {
-
+            Thread thread = new Thread(new ThreadStart(delegate () // thread 생성
+            {
+                this.Invoke(new Action(delegate ()
+                {
+                    Calc2(9999999);
+                }));
+               
+            }));
+            thread.Start();
+          
         }
 
-        private void combo_st_SelectedIndexChanged(object sender, EventArgs e)
+        private void Calc2(long cnt)
         {
-
+            long result = 0;
+            for (long i = 0; i < cnt; i++)
+            {
+                result += 2;
+                textBox_status.AppendText(Convert.ToString(result));
+            }
         }
 
-        private void combo_end_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-        private void dataGridView2_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
-        {
-
-        }
-
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
     }
 }
 
